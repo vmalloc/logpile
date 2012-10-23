@@ -15,6 +15,7 @@ parser.add_argument("-v", "--verbose", action="store_true", default=False)
 def main(args):
     from gevent.wsgi import WSGIServer
     if args.debug:
+        config.app.LOG_ROOT = "/tmp/logpile_logs"
         app.run(debug=True, port=config.app.TESTING_FRONTEND_TCP_PORT)
     else:
         http_server = WSGIServer(("0.0.0.0", config.app.APP_TCP_PORT), app)

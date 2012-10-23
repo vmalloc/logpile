@@ -1,6 +1,13 @@
+import re
+import os
+import errno
+import httplib
+import shutil
+
 import flask
 from flask.ext.openid import OpenID
 from . import config
+from . import db
 from . import auth
 from .utils import render_template
 
@@ -32,3 +39,25 @@ def login():
 def create_or_login(resp):
     auth.authenticate_from_openid_response(resp)
     return flask.redirect(oid.get_next_url())
+
+@app.route("/logs/<directory>", methods=["POST"])
+def upload(directory):
+    if not _is_valid_filename(directory) or any(not _is_valid_filename(f) for f in flask.request.files):
+        flask.abort(httplib.BAD_REQUEST)
+    directory = os.path.join(config.app.LOG_ROOT, directory)
+    _ensure_directory(directory)
+    for filename, fileobj in flask.request.files.iteritems():
+        with open(os.path.join(directory, filename), "w") as outfile:
+            shutil.copyfileobj(fileobj, outfile)
+            db.get_log_directories_collection().update({"directory":directory}, {"$inc" : {"size_bytes":outfile.tell()}}, upsert=True)
+    return flask.make_response("ok")
+
+def _is_valid_filename(f):
+    return re.match("[a-zA-Z0-9_.]+", f)
+
+def _ensure_directory(path):
+    try:
+        os.makedirs(path)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
