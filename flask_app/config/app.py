@@ -1,10 +1,12 @@
 import os
 
-APP_NAME                     = "autoclave"
+APP_NAME                     = "logpile"
 USER_NAME                    = APP_NAME
 GROUP_NAME                   = USER_NAME
 DEPLOY_ROOT                  = os.path.join("/opt", APP_NAME)
 DEPLOY_SRC_ROOT              = os.path.join(DEPLOY_ROOT, "src")
+
+LOG_ROOT                     = "/var/www/logpile"
 
 UWSGI_UNIX_SOCK_PATH         = "/tmp/__{}.sock".format(APP_NAME)
 UWSGI_LOG_PATH               = "/var/log/{}-uwsgi.log".format(APP_NAME)

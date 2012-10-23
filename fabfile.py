@@ -49,6 +49,7 @@ def deploy():
     _deploy_ensure_user()
     for directory in (
             config.app.DEPLOY_ROOT,
+            config.app.LOG_ROOT,
             config.app.DATA_ROOT,
             config.app.REDIS_DB_PATH,
             config.app.MONGO_DB_PATH,
