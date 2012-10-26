@@ -51,7 +51,7 @@ def upload(directory):
     for filename, fileobj in flask.request.files.iteritems():
         with open(os.path.join(directory, filename), "w") as outfile:
             shutil.copyfileobj(fileobj, outfile)
-            db.get_log_directories_collection().update({"directory":directory}, {"$inc" : {"size_bytes":outfile.tell()}}, upsert=True)
+            db.db["directories"].update({"directory":directory}, {"$inc" : {"size_bytes":outfile.tell()}}, upsert=True)
     return flask.make_response("ok")
 
 def _is_valid_filename(f):
