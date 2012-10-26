@@ -6,13 +6,15 @@ import shutil
 
 import flask
 from flask.ext.openid import OpenID
+from . import auth
 from . import config
 from . import db
-from . import auth
 from .utils import render_template
 
 app = flask.Flask(__name__)
 app.config.update(config.flask.__dict__)
+
+db.db.init_app(app)
 
 oid = OpenID(app)
 
