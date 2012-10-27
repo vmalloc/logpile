@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+
+{% block body %}
+<table class="table">
+  <thead>
+    <tr><th>Name</th><th>Size</th><th>Updated</th></tr>
+  </thead>
+  {% for dir in dirs %}
+  <tr>
+    <td>
+      {{dir._id}} -- {{dir.directory}}
+    </td>
+    <td>
+      {{ dir.size_bytes }} bytes
+    </td>
+    <td>
+      {{ dir.updated }}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

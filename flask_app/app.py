@@ -1,3 +1,5 @@
+import logging
+import datetime
 import re
 import os
 import errno
@@ -22,7 +24,12 @@ oid = OpenID(app)
 def index():
     if not auth.is_authenticated():
         return flask.redirect("/login")
-    return render_template("index.html")
+    return flask.redirect("/directories")
+
+@app.route("/directories")
+def view_directories():
+    dirs = db.db.LogDirectory.find()
+    return render_template("directories.html", dirs=dirs)
 
 @app.route('/login')
 @oid.loginhandler
@@ -49,9 +56,18 @@ def upload(directory):
     directory = os.path.join(config.app.LOG_ROOT, directory)
     _ensure_directory(directory)
     for filename, fileobj in flask.request.files.iteritems():
-        with open(os.path.join(directory, filename), "w") as outfile:
+        file_path = os.path.join(directory, filename)
+        previous_size = os.path.getsize(file_path) if os.path.isfile(file_path) else 0
+        with open(file_path, "w") as outfile:
             shutil.copyfileobj(fileobj, outfile)
-            db.db["directories"].update({"directory":directory}, {"$inc" : {"size_bytes":outfile.tell()}}, upsert=True)
+            dirs = db.db["directories"]
+            pred = {"directory" : directory}
+            dirs.update(pred,
+                        {
+                            "$set" : dict(pred, updated=datetime.datetime.now(), watchers=[]),
+                            "$inc" : {"size_bytes" : outfile.tell() - previous_size},
+                        },
+                        upsert=True, safe=True)
     return flask.make_response("ok")
 
 def _is_valid_filename(f):

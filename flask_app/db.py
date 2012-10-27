@@ -1,3 +1,4 @@
+import datetime
 from flask.ext.mongokit import MongoKit, Document
 
 db = MongoKit()
@@ -8,6 +9,8 @@ class LogDirectory(Document):
     structure = {
         "directory" : unicode,
         "size_bytes" : int,
+        "updated" : datetime.datetime,
+        "watchers" : [],
     }
     default_values = {"size_bytes" : 0}
     use_dot_notation = True
