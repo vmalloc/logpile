@@ -41,7 +41,7 @@ def login():
     # if we are already logged in, go back to were we came from
     if auth.is_authenticated():
         return flask.redirect(oid.get_next_url())
-    return oid.try_login("https://www.google.com/accounts/o8/id", 
+    return oid.try_login("https://www.google.com/accounts/o8/id",
                          ask_for=['email', 'fullname', 'nickname'])
 
 @oid.after_login
@@ -49,22 +49,31 @@ def create_or_login(resp):
     auth.authenticate_from_openid_response(resp)
     return flask.redirect(oid.get_next_url())
 
+@app.route("/logs/<directory>")
+def get_directory(directory):
+    directory_path = os.path.join(config.app.LOG_ROOT, directory)
+    if not os.path.isdir(directory_path):
+        abort(httlib.NOT_FOUND)
+    listing = [{"filename" : filename, "size" : os.path.getsize(os.path.join(directory_path, filename))}
+               for filename in os.listdir(directory_path)]
+    return render_template("listing.html", directory=directory, listing=listing)
+
 @app.route("/logs/<directory>", methods=["POST"])
 def upload(directory):
     if not _is_valid_filename(directory) or any(not _is_valid_filename(f) for f in flask.request.files):
         flask.abort(httplib.BAD_REQUEST)
-    directory = os.path.join(config.app.LOG_ROOT, directory)
-    _ensure_directory(directory)
+    directory_path = os.path.join(config.app.LOG_ROOT, directory)
+    _ensure_directory(directory_path)
     for filename, fileobj in flask.request.files.iteritems():
-        file_path = os.path.join(directory, filename)
+        file_path = os.path.join(directory_path, filename)
         previous_size = os.path.getsize(file_path) if os.path.isfile(file_path) else 0
         with open(file_path, "w") as outfile:
             shutil.copyfileobj(fileobj, outfile)
             dirs = db.db["directories"]
-            pred = {"directory" : directory}
+            pred = {"name" : directory}
             dirs.update(pred,
                         {
-                            "$set" : dict(pred, updated=datetime.datetime.now(), watchers=[]),
+                            "$set" : dict(pred, updated=datetime.datetime.now(), watchers=[], deleted=False, directory=directory_path),
                             "$inc" : {"size_bytes" : outfile.tell() - previous_size},
                         },
                         upsert=True, safe=True)

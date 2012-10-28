@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+
+{% block body %}
+<table class="table">
+{% for file in listing %}
+  <tr><td>{{file.filename}}</td><td>{{file.size}}</td></tr>
+{% endfor %}
+</table>
+{% endblock %}
