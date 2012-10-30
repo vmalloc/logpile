@@ -7,6 +7,6 @@ CELERY_IMPORTS = ("flask_app.tasks", )
 CELERYBEAT_SCHEDULE = {
  "purge-old" : {
     "task" : "flask_app.tasks.purge_old",
-     "schedule" : timedelta(seconds=5),
+     "schedule" : timedelta(minutes=10),
  }
 }

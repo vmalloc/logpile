@@ -9,7 +9,7 @@ DEPLOY_ROOT                  = os.path.join("/opt", APP_NAME)
 DEPLOY_SRC_ROOT              = os.path.join(DEPLOY_ROOT, "src")
 
 LOG_ROOT                     = "/var/www/logpile"
-MAX_AGE = datetime.timedelta(seconds=60)
+MAX_AGE                      = datetime.timedelta(days=30)
 
 UWSGI_UNIX_SOCK_PATH         = "/tmp/__{}.sock".format(APP_NAME)
 UWSGI_LOG_PATH               = "/var/log/{}-uwsgi.log".format(APP_NAME)
