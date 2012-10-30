@@ -16,7 +16,7 @@ celery = Celery("tasks", broker=celery_config.BROKER_URL)
 def purge_old():
     with app.app_context():
         cutoff = datetime.datetime.now() - config.MAX_AGE
-        for deleted in db.LogDirectory.find({"updated" : {"$lt" : cutoff}, "deleted" : False, "watchers" : []}):
+        for deleted in db.LogDirectory.find({"updated" : {"$lt" : cutoff}, "deleted" : False, "stars" : []}):
             _logger.info("Deleting %s", deleted)
             _delete(deleted)
 

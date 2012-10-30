@@ -13,6 +13,7 @@ from . import auth
 from . import config
 from . import db
 from .utils import render_template
+from .utils import returns_json_response
 
 app = flask.Flask(__name__)
 app.config.update(config.flask.__dict__)
@@ -63,13 +64,14 @@ def create_or_login(resp):
 
 @app.route("/logs/<directory_name>")
 def get_directory(directory_name):
-    directory = db.db.LogDirectory.one({"name":directory_name})
+    directory = _get_directory_by_name(directory_name)
     path = directory.get_path()
     if not os.path.isdir(path):
-        abort(httlib.NOT_FOUND)
+        flask.abort(httlib.NOT_FOUND)
     listing = [{"filename" : filename, "size" : os.path.getsize(os.path.join(path, filename))}
                for filename in os.listdir(path)]
-    return render_template("listing.html", directory=directory, listing=listing)
+    return render_template("listing.html", directory=directory, listing=listing,
+                           starred=directory.is_starred_by_current_user())
 
 @app.route("/raw/<path:filename>")
 def get_raw_log(filename):
@@ -88,18 +90,37 @@ def upload(directory_name):
     log_directory.mark_updated()
     return flask.make_response("ok")
 
+@app.route("/logs/<directory_name>/toggle_star", methods=["POST"])
+@returns_json_response
+def star_directory(directory_name):
+    if not auth.is_authenticated():
+        flask.abort(httplib.FORBIDDEN)
+    log_directory = _get_directory_by_name(directory_name)
+    email = flask.session["user"]["email"]
+    if email in log_directory["stars"]:
+        action = "$pop"
+        starred = False
+    else:
+        action = "$push"
+        starred = True
+    db.db[db.db.LogDirectory.__collection__].update(
+        {"name" : directory_name},
+        {action : {"stars" : email}})
+    return dict(starred=starred)
+
+
 def _is_valid_filename(f):
     return re.match("[a-zA-Z0-9_.]+", f)
 
+def _get_directory_by_name(directory_name):
+    return db.db.LogDirectory.one({"name" : directory_name})
+
 def _ensure_directory(directory_name):
-    dirs = db.db["directories"]
-    pred = {"name" : directory_name}
-    dirs.update(pred,
-                {
-                    "$set" : dict(pred, updated=datetime.datetime.now(), watchers=[], deleted=False),
-                },
-                upsert=True, safe=True)
-    log_directory = db.db.LogDirectory.one({"name" : directory_name})
+    log_directory = _get_directory_by_name(directory_name)
+    if log_directory is None:
+        log_directory = db.db.LogDirectory()
+        log_directory["name"] = directory_name
+        log_directory.save()
     try:
         os.makedirs(log_directory.get_path())
     except OSError as e:

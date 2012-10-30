@@ -1,10 +1,51 @@
 {% extends "layout.html" %}
 
 {% block body %}
-<table class="table">
-  <tr><th>Filename</th><th>Size</th></tr>
+<div class="row">
+  <div class="container" style="padding-bottom: 1em">
+    <span class="pull-right">
+    <button class="btn {% if not session.user %}disabled{% endif %}" id="toggle-star-btn" title="Starring a log directory prevents it from being deleted"><i></i></button>
+    </span>
+  </div>
+</div>
+<div class="container">
+  <table class="table">
+    <tr><th>Filename</th><th>Size</th></tr>
 {% for file in listing %}
-  <tr><td><a href="/raw/{{directory._id}}/{{file.filename}}">{{file.filename}}</a></td><td>{{file.size}} bytes</td></tr>
+    <tr><td><a href="/raw/{{directory._id}}/{{file.filename}}">{{file.filename}}</a></td><td>{{file.size}} bytes</td></tr>
 {% endfor %}
-</table>
+  </table>
+</div>
+{% endblock %}
+
+{% block script %}
+
+function _toggle_star() {
+   var button = $(this);
+   $.ajax({
+      type: "post",
+      url: "/logs/{{directory.name}}/toggle_star",
+      dataType: 'json'
+   }).success(function(result) {
+       _update_star_button(result.starred);
+   });
+}
+
+function _update_star_button(is_starred) {
+   var button = $("#toggle-star-btn");
+   button.toggleClass("btn-info", is_starred);
+   var i = button.find("i");
+   i.toggleClass("icon-star", is_starred);
+   i.toggleClass("icon-star-empty", !is_starred);
+
+}
+
+$(function() {
+    {% if starred %}
+    _update_star_button(true);
+    {% else %}
+    _update_star_button(false);
+    {% endif %}
+    $("#toggle-star-btn").click(_toggle_star)
+});
 {% endblock %}
