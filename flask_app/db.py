@@ -1,4 +1,6 @@
+import os
 import datetime
+from . import config
 from flask.ext import mongokit as flask_mongokit
 
 class AutoclaveMongoKit(flask_mongokit.MongoKit):
@@ -9,14 +11,18 @@ class AutoclaveMongoKit(flask_mongokit.MongoKit):
 db = AutoclaveMongoKit()
 
 @db.register
-class LogDirectory(Document):
+class LogDirectory(flask_mongokit.Document):
     __collection__ = "directories"
     structure = {
-        "directory" : unicode,
+        "name" : unicode,
         "deleted" : bool,
-        "size_bytes" : int,
         "updated" : datetime.datetime,
         "watchers" : [],
     }
-    default_values = {"size_bytes" : 0, "deleted" : False}
+    default_values = {"deleted" : False}
     use_dot_notation = True
+    def get_path(self):
+        return os.path.join(config.app.LOG_ROOT, str(self._id))
+    def mark_updated(self):
+        self["updated"] = datetime.datetime.now()
+        self.save()

@@ -158,6 +158,11 @@ http {
                       autoindex on;
              }
 
+	     location /raw {
+	     	      alias {{config.app.LOG_ROOT}};
+		      autoindex on;
+	     }
+
              location / {
 
                       include uwsgi_params;

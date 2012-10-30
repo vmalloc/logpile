@@ -2,8 +2,9 @@
 
 {% block body %}
 <table class="table">
+  <tr><th>Filename</th><th>Size</th></tr>
 {% for file in listing %}
-  <tr><td>{{file.filename}}</td><td>{{file.size}}</td></tr>
+  <tr><td><a href="/raw/{{directory._id}}/{{file.filename}}">{{file.filename}}</a></td><td>{{file.size}} bytes</td></tr>
 {% endfor %}
 </table>
 {% endblock %}

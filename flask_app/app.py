@@ -49,42 +49,48 @@ def create_or_login(resp):
     auth.authenticate_from_openid_response(resp)
     return flask.redirect(oid.get_next_url())
 
-@app.route("/logs/<directory>")
-def get_directory(directory):
-    directory_path = os.path.join(config.app.LOG_ROOT, directory)
-    if not os.path.isdir(directory_path):
+@app.route("/logs/<directory_name>")
+def get_directory(directory_name):
+    directory = db.db.LogDirectory.one({"name":directory_name})
+    path = directory.get_path()
+    if not os.path.isdir(path):
         abort(httlib.NOT_FOUND)
-    listing = [{"filename" : filename, "size" : os.path.getsize(os.path.join(directory_path, filename))}
-               for filename in os.listdir(directory_path)]
+    listing = [{"filename" : filename, "size" : os.path.getsize(os.path.join(path, filename))}
+               for filename in os.listdir(path)]
     return render_template("listing.html", directory=directory, listing=listing)
 
-@app.route("/logs/<directory>", methods=["POST"])
-def upload(directory):
-    if not _is_valid_filename(directory) or any(not _is_valid_filename(f) for f in flask.request.files):
+@app.route("/raw/<path:filename>")
+def get_raw_log(filename):
+    assert app.config["DEBUG"]
+    return flask.send_from_directory(config.app.LOG_ROOT, filename)
+
+@app.route("/logs/<directory_name>", methods=["POST"])
+def upload(directory_name):
+    if not _is_valid_filename(directory_name) or any(not _is_valid_filename(f) for f in flask.request.files):
         flask.abort(httplib.BAD_REQUEST)
-    directory_path = os.path.join(config.app.LOG_ROOT, directory)
-    _ensure_directory(directory_path)
+    log_directory = _ensure_directory(directory_name)
     for filename, fileobj in flask.request.files.iteritems():
-        file_path = os.path.join(directory_path, filename)
-        previous_size = os.path.getsize(file_path) if os.path.isfile(file_path) else 0
+        file_path = os.path.join(log_directory.get_path(), filename)
         with open(file_path, "w") as outfile:
             shutil.copyfileobj(fileobj, outfile)
-            dirs = db.db["directories"]
-            pred = {"name" : directory}
-            dirs.update(pred,
-                        {
-                            "$set" : dict(pred, updated=datetime.datetime.now(), watchers=[], deleted=False, directory=directory_path),
-                            "$inc" : {"size_bytes" : outfile.tell() - previous_size},
-                        },
-                        upsert=True, safe=True)
+    log_directory.mark_updated()
     return flask.make_response("ok")
 
 def _is_valid_filename(f):
     return re.match("[a-zA-Z0-9_.]+", f)
 
-def _ensure_directory(path):
+def _ensure_directory(directory_name):
+    dirs = db.db["directories"]
+    pred = {"name" : directory_name}
+    dirs.update(pred,
+                {
+                    "$set" : dict(pred, updated=datetime.datetime.now(), watchers=[], deleted=False),
+                },
+                upsert=True, safe=True)
+    log_directory = db.db.LogDirectory.one({"name" : directory_name})
     try:
-        os.makedirs(path)
+        os.makedirs(log_directory.get_path())
     except OSError as e:
         if e.errno != errno.EEXIST:
             raise
+    return log_directory
